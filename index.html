@@ -1,0 +1,47 @@
+<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta charset="utf-8"><title>Dash Drift</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#071326;color:white;font-family:Arial;touch-action:none}header{padding:12px;display:flex;justify-content:space-between;font-weight:bold;color:#7df9ff}main{height:calc(100dvh - 100px);position:relative}canvas{width:100%;height:100%;display:block}.hud{position:absolute;top:8px;left:12px;right:12px;display:flex;justify-content:space-between;font-weight:bold;pointer-events:none}.panel{position:absolute;inset:0;background:#06101ddd;display:flex;align-items:center;justify-content:center;padding:18px}.card{background:#102a46;border:1px solid #4a789d;border-radius:20px;padding:22px;text-align:center;width:min(100%,360px)}h1{color:#7df9ff}button{padding:13px 16px;margin:5px;border:0;border-radius:12px;background:#7df9ff;font-weight:bold;color:#071326}button.alt{background:#294b6a;color:white}footer{display:flex;justify-content:center;gap:5px;padding:7px}footer button{font-size:12px;padding:10px}
+</style></head><body><header><span>DASH DRIFT</span><span>🪙 <b id="coins">0</b>　🏆 <b id="best">0</b></span></header>
+<main><canvas id="c"></canvas><div class="hud" id="hud" hidden><span>Score <b id="score">0</b></span><span>🪙 <b id="runcoins">0</b></span></div>
+<div class="panel" id="menu"><div class="card"><h1>DASH DRIFT</h1><p>Switch lanes • Jump • Slide • Collect coins</p><button id="play">PLAY</button><button class="alt" id="garage">GARAGE</button><button class="alt" id="shop">COIN SHOP</button><p id="info">Offline endless runner</p></div></div>
+<div class="panel" id="garagePanel" hidden><div class="card"><h1>GARAGE</h1><p id="carInfo"></p><button id="carPrev" class="alt">PREVIOUS</button><button id="carNext">NEXT / UNLOCK</button><button id="backGarage" class="alt">BACK</button></div></div>
+<div class="panel" id="shopPanel" hidden><div class="card"><h1>COIN SHOP</h1><p>Choose a coin pack. Payment is handled securely by Google Play.</p><div id="productList"></div><p id="shopInfo">Loading Google Play products…</p><button id="backShop" class="alt">BACK</button></div></div>
+<div class="panel" id="over" hidden><div class="card"><h1>RUN OVER</h1><p id="result"></p><button id="again">PLAY AGAIN</button><button id="home" class="alt">HOME</button></div></div></main>
+<footer><button class="alt" id="left">◀</button><button class="alt" id="jump">JUMP</button><button class="alt" id="slide">SLIDE</button><button class="alt" id="right">▶</button><button class="alt" id="pause">Ⅱ</button></footer>
+<script>
+(()=>{const $=x=>document.getElementById(x),c=$('c'),g=c.getContext('2d');let w,h,lane=1,score=0,coins=0,objs=[],tick=0,vy=0,jump=0,slide=0,run=false,paused=false,car=0;
+let d={coins:0,best:0,unlocked:[0],daily:''};try{d={...d,...JSON.parse(localStorage.getItem('dd-save')||'{}')}}catch{}
+const colors=['#21c8ff','#ff536d','#ffc64a','#bd8aff'],cost=[0,150,350,700];
+function save(){localStorage.setItem('dd-save',JSON.stringify(d));$('coins').textContent=d.coins;$('best').textContent=d.best}
+function size(){let r=c.getBoundingClientRect(),q=Math.min(devicePixelRatio||1,2);w=r.width;h=r.height;c.width=w*q;c.height=h*q;g.setTransform(q,0,0,q,0,0)}addEventListener('resize',size);size();
+function x(n){return w*(.25+n*.25)}
+function draw(){g.fillStyle='#174737';g.fillRect(0,0,w,h);g.fillStyle='#354252';g.beginPath();g.moveTo(w*.12,0);g.lineTo(w*.88,0);g.lineTo(w*.98,h);g.lineTo(w*.02,h);g.fill();g.strokeStyle='#ffffff66';g.setLineDash([22,20]);for(let i=1;i<3;i++){g.beginPath();g.moveTo(w*(.12+i*.253),0);g.lineTo(w*(.12+i*.253),h);g.stroke()}g.setLineDash([]);
+objs.forEach(o=>{g.fillStyle=o.t==='coin'?'#ffd34d':o.t==='barrier'?'#ff5e5e':'#a7bdcf';if(o.t==='coin'){g.beginPath();g.arc(x(o.l),o.y,10,0,7);g.fill()}else g.fillRect(x(o.l)-w*.06,o.y-18,w*.12,36)});
+g.fillStyle=colors[car];g.beginPath();g.roundRect(x(lane)-w*.07,h*.78-jump,w*.14,52,9);g.fill();g.fillStyle='#b9ecff';g.fillRect(x(lane)-w*.045,h*.78-jump-34,w*.09,16)}
+function step(){if(run&&!paused){score++;tick++;if(tick>42){objs.push({l:Math.floor(Math.random()*3),y:-20,t:Math.random()<.52?'coin':Math.random()<.5?'barrier':'truck'});tick=0}
+objs.forEach(o=>{o.y+=5+Math.min(score/600,6);if(!o.hit&&o.y>h*.78-18&&o.y<h*.78+18&&o.l===lane){if(o.t==='coin'){o.hit=true;coins++}else if(jump<25&&slide===0){finish()}}});
+objs=objs.filter(o=>o.y<h+40&&!o.hit);if(jump>0){jump+=vy;vy-=.9;if(jump<0){jump=0;vy=0}}if(slide>0)slide--;$('score').textContent=Math.floor(score/5);$('runcoins').textContent=coins}
+draw();if(run)requestAnimationFrame(step)}
+function show(id){['menu','garagePanel','shopPanel','over'].forEach(k=>$(k).hidden=true);$(id).hidden=false}
+function start(){run=true;paused=false;lane=1;score=0;coins=0;objs=[];tick=0;jump=0;vy=0;$('hud').hidden=false;show('menu');$('menu').hidden=true;requestAnimationFrame(step)}
+function finish(){if(!run)return;run=false;d.coins+=coins;d.best=Math.max(d.best,Math.floor(score/5));save();$('hud').hidden=true;$('result').textContent='Score: '+Math.floor(score/5)+' | Coins: '+coins;show('over')}
+function act(a){if(!run||paused)return;if(a==='left')lane=Math.max(0,lane-1);if(a==='right')lane=Math.min(2,lane+1);if(a==='jump'&&jump===0){vy=15}if(a==='slide')slide=30}
+['left','right','jump','slide'].forEach(a=>$(a).onclick=()=>act(a));
+$('play').onclick=start;$('again').onclick=start;$('home').onclick=()=>{run=false;show('menu')};
+$('garage').onclick=()=>{show('garagePanel');garage()};$('backGarage').onclick=()=>show('menu');
+function garage(){$('carInfo').textContent=['Blue Street','Neon Red','Gold Rush','Violet X'][car]+' — '+(d.unlocked.includes(car)?'UNLOCKED':'Cost '+cost[car]+' coins')}
+$('carPrev').onclick=()=>{car=(car+3)%4;garage()};$('carNext').onclick=()=>{if(d.unlocked.includes(car)){ }else if(d.coins>=cost[car]){d.coins-=cost[car];d.unlocked.push(car)}else{alert('Play to collect more coins')}if(d.unlocked.includes(car)){car=(car+1)%4;while(d.unlocked.includes(car)&&car!==0)break}save();garage()};
+const packs=[
+{id:'coins_101',price:'$1.01',coins:100},{id:'coins_201',price:'$2.01',coins:200},
+{id:'coins_301',price:'$3.01',coins:300},{id:'coins_401',price:'$4.01',coins:400},
+{id:'coins_501',price:'$5.01',coins:500},{id:'coins_551',price:'$5.51',coins:550}
+];
+function renderPacks(){ $('productList').innerHTML=packs.map(p=>`<button class="alt" style="display:block;width:100%;margin:6px 0" onclick="buyPack('${p.id}')"><b>${p.price}</b> — ${p.coins} Coins</button>`).join(''); }
+window.buyPack=(id)=>{if(window.AndroidBilling&&AndroidBilling.purchase){AndroidBilling.purchase(id);$('shopInfo').textContent='Opening Google Play…'}else{$('shopInfo').textContent='Google Play purchase works in the Android app build.'}};
+window.onNativeCoinsAdded=(amount)=>{d.coins+=Number(amount);save();$('shopInfo').textContent=amount+' coins added successfully! Balance: '+d.coins};
+window.onBillingMessage=(message)=>{$('shopInfo').textContent=message};
+$('shop').onclick=()=>{show('shopPanel');$('shopInfo').textContent='Balance: '+d.coins;renderPacks();if(window.AndroidBilling&&AndroidBilling.loadProducts)AndroidBilling.loadProducts()};$('backShop').onclick=()=>show('menu');
+$('pause').onclick=()=>{paused=!paused;$('pause').textContent=paused?'▶':'Ⅱ';if(!paused&&run)requestAnimationFrame(step)};
+let sx=0,sy=0;c.addEventListener('touchstart',e=>{sx=e.touches[0].clientX;sy=e.touches[0].clientY},{passive:true});c.addEventListener('touchend',e=>{let dx=e.changedTouches[0].clientX-sx,dy=e.changedTouches[0].clientY-sy;if(Math.abs(dx)>Math.abs(dy))act(dx<0?'left':'right');else act(dy<0?'jump':'slide')},{passive:true});
+save();})();
+</script></body></html>
